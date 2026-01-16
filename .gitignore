@@ -34,3 +34,6 @@ resources/msys2.tar.zst
 
 settings.json
 logs/
+
+# Agent working directory
+agent/

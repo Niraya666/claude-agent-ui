@@ -60,6 +60,29 @@ function resolveAgentPath(root: string, relativePath: string): string | null {
   return resolved;
 }
 
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']);
+
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon'
+};
+
+function isImageFile(name: string): boolean {
+  const extension = name.toLowerCase().split('.').pop() ?? '';
+  return IMAGE_EXTENSIONS.has(extension);
+}
+
+function getImageMimeType(name: string): string {
+  const extension = name.toLowerCase().split('.').pop() ?? '';
+  return IMAGE_MIME_TYPES[extension] ?? 'application/octet-stream';
+}
+
 const TEXT_EXTENSIONS = new Set([
   'md',
   'markdown',
@@ -270,6 +293,35 @@ async function main() {
             500
           );
         }
+      }
+
+      if (pathname === '/agent/image' && request.method === 'GET') {
+        const relativePath = url.searchParams.get('path') ?? '';
+        if (!relativePath) {
+          return jsonResponse({ error: 'Missing path.' }, 400);
+        }
+        const resolvedPath = resolveAgentPath(resolvedAgentDir, relativePath);
+        if (!resolvedPath) {
+          return jsonResponse({ error: 'Invalid path.' }, 400);
+        }
+        const file = Bun.file(resolvedPath);
+        if (!(await file.exists())) {
+          return jsonResponse({ error: 'File not found.' }, 404);
+        }
+        const name = basename(resolvedPath);
+        if (!isImageFile(name)) {
+          return jsonResponse({ error: 'Not an image file.' }, 415);
+        }
+        const maxSize = 10 * 1024 * 1024; // 10MB max for images
+        if (file.size > maxSize) {
+          return jsonResponse({ error: 'Image too large to preview.' }, 413);
+        }
+        return new Response(file.stream(), {
+          headers: {
+            'Content-Type': getImageMimeType(name),
+            'Cache-Control': 'max-age=3600'
+          }
+        });
       }
 
       if (pathname === '/agent/upload' && request.method === 'POST') {

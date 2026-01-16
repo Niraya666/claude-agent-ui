@@ -1,4 +1,4 @@
-import { ChevronRight, FileText, Folder, FolderOpen } from 'lucide-react';
+import { ChevronRight, FileText, Folder, FolderOpen, Image } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Tree, type NodeApi } from 'react-arborist';
 
@@ -30,6 +30,18 @@ type FilePreview = {
   size: number;
 };
 
+type ImagePreview = {
+  name: string;
+  path: string;
+};
+
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']);
+
+function isImageFile(name: string): boolean {
+  const extension = name.toLowerCase().split('.').pop() ?? '';
+  return IMAGE_EXTENSIONS.has(extension);
+}
+
 function getParentPath(path: string): string {
   if (!path) {
     return '';
@@ -53,6 +65,7 @@ export default function DirectoryPanel({ agentDir }: DirectoryPanelProps) {
   const [selectedNode, setSelectedNode] = useState<DirectoryTreeNode | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState<FilePreview | null>(null);
+  const [imagePreview, setImagePreview] = useState<ImagePreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const treeContainerRef = useRef<HTMLDivElement>(null);
@@ -121,7 +134,15 @@ export default function DirectoryPanel({ agentDir }: DirectoryPanelProps) {
 
     setIsPreviewLoading(true);
     setPreview(null);
+    setImagePreview(null);
     setPreviewError(null);
+
+    // Check if it's an image file
+    if (isImageFile(node.name)) {
+      setImagePreview({ name: node.name, path: node.path });
+      setIsPreviewLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`/agent/file?path=${encodeURIComponent(node.path)}`);
@@ -259,11 +280,13 @@ export default function DirectoryPanel({ agentDir }: DirectoryPanelProps) {
                   const data = node.data as DirectoryTreeNode;
                   const isDir = data.type === 'dir';
                   const extension = !isDir ? getFileExtension(data.name) : '';
+                  const isImage = !isDir && isImageFile(data.name);
                   const Icon =
                     isDir ?
                       node.isOpen ?
                         FolderOpen
                       : Folder
+                    : isImage ? Image
                     : FileText;
 
                   return (
@@ -312,30 +335,44 @@ export default function DirectoryPanel({ agentDir }: DirectoryPanelProps) {
           </div>
         )}
       </div>
-      {(preview || previewError || isPreviewLoading) && (
+      {(preview || imagePreview || previewError || isPreviewLoading) && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-4 py-6 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-3xl">
+          <div className={`glass-panel w-full ${imagePreview ? 'max-w-4xl' : 'max-w-3xl'}`}>
             <div className="flex items-start justify-between gap-4 border-b border-[var(--line)] px-5 py-4">
               <div>
                 <div className="text-[13px] font-semibold text-[var(--ink)]">
-                  {preview?.name ?? 'Preview'}
+                  {preview?.name ?? imagePreview?.name ?? 'Preview'}
                 </div>
                 {preview && (
                   <div className="text-[11px] text-[var(--ink-muted)]">
                     {preview.size.toLocaleString()} bytes
                   </div>
                 )}
+                {imagePreview && (
+                  <div className="text-[11px] text-[var(--ink-muted)]">Image Preview</div>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPreview(null);
-                  setPreviewError(null);
-                }}
-                className="action-button px-3 py-1 text-[11px] font-semibold"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                {imagePreview && (
+                  <a
+                    href={`/agent/download?path=${encodeURIComponent(imagePreview.path)}`}
+                    className="action-button px-3 py-1 text-[11px] font-semibold"
+                  >
+                    Download
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreview(null);
+                    setImagePreview(null);
+                    setPreviewError(null);
+                  }}
+                  className="action-button px-3 py-1 text-[11px] font-semibold"
+                >
+                  Close
+                </button>
+              </div>
             </div>
             <div className="max-h-[70vh] overflow-auto px-5 py-4">
               {isPreviewLoading && (
@@ -346,6 +383,19 @@ export default function DirectoryPanel({ agentDir }: DirectoryPanelProps) {
                 <pre className="text-[12px] leading-relaxed whitespace-pre-wrap text-[var(--ink)]">
                   {preview.content}
                 </pre>
+              )}
+              {imagePreview && !isPreviewLoading && !previewError && (
+                <div className="flex items-center justify-center">
+                  <img
+                    src={`/agent/image?path=${encodeURIComponent(imagePreview.path)}`}
+                    alt={imagePreview.name}
+                    className="max-h-[60vh] max-w-full rounded-lg object-contain shadow-lg"
+                    onError={() => {
+                      setImagePreview(null);
+                      setPreviewError('Failed to load image.');
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
