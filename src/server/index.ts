@@ -61,6 +61,7 @@ function resolveAgentPath(root: string, relativePath: string): string | null {
 }
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']);
+const HTML_EXTENSIONS = new Set(['html', 'htm']);
 
 const IMAGE_MIME_TYPES: Record<string, string> = {
   png: 'image/png',
@@ -76,6 +77,11 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
 function isImageFile(name: string): boolean {
   const extension = name.toLowerCase().split('.').pop() ?? '';
   return IMAGE_EXTENSIONS.has(extension);
+}
+
+function isHtmlFile(name: string): boolean {
+  const extension = name.toLowerCase().split('.').pop() ?? '';
+  return HTML_EXTENSIONS.has(extension);
 }
 
 function getImageMimeType(name: string): string {
@@ -320,6 +326,38 @@ async function main() {
           headers: {
             'Content-Type': getImageMimeType(name),
             'Cache-Control': 'max-age=3600'
+          }
+        });
+      }
+
+      if (pathname === '/agent/html' && request.method === 'GET') {
+        const relativePath = url.searchParams.get('path') ?? '';
+        if (!relativePath) {
+          return jsonResponse({ error: 'Missing path.' }, 400);
+        }
+        const resolvedPath = resolveAgentPath(resolvedAgentDir, relativePath);
+        if (!resolvedPath) {
+          return jsonResponse({ error: 'Invalid path.' }, 400);
+        }
+        const file = Bun.file(resolvedPath);
+        if (!(await file.exists())) {
+          return jsonResponse({ error: 'File not found.' }, 404);
+        }
+        const name = basename(resolvedPath);
+        if (!isHtmlFile(name)) {
+          return jsonResponse({ error: 'Not an HTML file.' }, 415);
+        }
+        const maxSize = 5 * 1024 * 1024; // 5MB max for HTML
+        if (file.size > maxSize) {
+          return jsonResponse({ error: 'HTML file too large.' }, 413);
+        }
+        return new Response(file.stream(), {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Security-Policy':
+              "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plot.ly https://cdn.jsdelivr.net; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline';",
+            'X-Frame-Options': 'SAMEORIGIN',
+            'Cache-Control': 'max-age=300'
           }
         });
       }
