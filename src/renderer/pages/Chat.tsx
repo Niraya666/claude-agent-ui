@@ -73,8 +73,8 @@ export default function Chat({ agentDir, sessionState }: ChatProps) {
   };
 
   return (
-    <div className="page-enter flex min-h-screen flex-col bg-[var(--paper)] text-[var(--ink)] lg:flex-row">
-      <div className="flex w-full flex-1 flex-col border-b border-[var(--line)] bg-[var(--paper-strong)]/70 backdrop-blur lg:w-3/4 lg:border-r lg:border-b-0">
+    <div className="page-enter flex h-screen flex-col overflow-hidden bg-[var(--paper)] text-[var(--ink)] lg:flex-row">
+      <div className="flex w-full min-h-0 flex-1 flex-col border-b border-[var(--line)] bg-[var(--paper-strong)]/70 backdrop-blur lg:w-3/4 lg:border-r lg:border-b-0">
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div>
             <div className="text-[10px] font-semibold tracking-[0.4em] text-[var(--ink-muted)] uppercase">
@@ -105,7 +105,7 @@ export default function Chat({ agentDir, sessionState }: ChatProps) {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {agentError && (
             <div className="border-b border-[var(--line)] bg-[#f5e4d9]/80 px-4 py-3 text-[11px] text-[var(--ink)]">
               <div className="flex items-start gap-2">
@@ -156,7 +156,7 @@ export default function Chat({ agentDir, sessionState }: ChatProps) {
         </div>
       </div>
 
-      <div className="flex w-full flex-col lg:w-1/4">
+      <div className="flex w-full min-h-0 flex-col overflow-hidden lg:w-1/4">
         <DirectoryPanel agentDir={agentDir} />
       </div>
       {showSystemInfo && (

@@ -1,6 +1,10 @@
+import { useMemo } from 'react';
+
 import type { BashInput, ToolUseSimple } from '@/types/chat';
+import { extractMediaPaths } from '@/utils/mediaPathExtractor';
 
 import { CollapsibleTool } from './CollapsibleTool';
+import InlineMediaDisplay from './InlineMediaDisplay';
 import { ToolHeader } from './utils';
 
 interface BashToolProps {
@@ -9,6 +13,12 @@ interface BashToolProps {
 
 export default function BashTool({ tool }: BashToolProps) {
   const input = tool.parsedInput as BashInput;
+
+  // Extract media paths from tool output
+  const mediaItems = useMemo(() => {
+    if (!tool.result || tool.isError) return [];
+    return extractMediaPaths(tool.result);
+  }, [tool.result, tool.isError]);
 
   if (!input) {
     // Input not parsed yet - show minimal placeholder
@@ -50,5 +60,11 @@ export default function BashTool({ tool }: BashToolProps) {
     </div>
   );
 
-  return <CollapsibleTool collapsedContent={collapsedContent} expandedContent={expandedContent} />;
+  return (
+    <div>
+      <CollapsibleTool collapsedContent={collapsedContent} expandedContent={expandedContent} />
+      {/* Inline media display for generated images/charts - always visible */}
+      {mediaItems.length > 0 && <InlineMediaDisplay mediaItems={mediaItems} className="mt-3 ml-3" />}
+    </div>
+  );
 }

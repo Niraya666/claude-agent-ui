@@ -305,3 +305,38 @@ pre code {
   border-left: none !important;
   padding-left: 0 !important;
 }
+
+/* Jupyter-style inline media output */
+.inline-media-output {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--line);
+}
+
+/* Inline image styling */
+.inline-image-container {
+  display: inline-block;
+  position: relative;
+}
+
+.inline-image {
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.inline-image:hover {
+  transform: scale(1.01);
+}
+
+/* Plotly container styling */
+.plotly-container {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.plotly-container:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 12px 28px -16px rgb(24 18 14 / 0.35);
+}
